@@ -1,0 +1,414 @@
+{
+  "_meta": {
+    "schema_version": "v1beta0-7.9.0"
+  },
+  "farm": {
+    "name": "Sensu-Monitoring",
+    "description": "",
+    "project": {
+      "id": "1682b63d-6d28-4b5f-8438-3cf058f89a6c"
+    },
+    "timezone": "America/New_York",
+    "launchOrder": "simultaneous",
+    "variables": [
+      {
+        "name": "client_subscription",
+        "value": "client",
+        "description": "client_subscription"
+      },
+      {
+        "name": "sensu_endpoint",
+        "value": "internal-sensu-elb-872514308.us-west-1.elb.amazonaws.com",
+        "description": "sensu_endpoint"
+      }
+    ]
+  },
+  "roles": [
+    {
+      "alias": "uchiwa-docker",
+      "role": {
+        "name": "Sensu-Chef-1604"
+      },
+      "cloudPlatform": "ec2",
+      "cloudLocation": "us-west-1",
+      "instanceType": {
+        "id": "m3.medium"
+      },
+      "launchIndex": 0,
+      "advancedConfiguration": {
+        "disableAgentIptablesManagement": false,
+        "disableAgentNtpManagement": false,
+        "rebootAfterHostInit": false
+      },
+      "scaling": {
+        "considerSuspendedServers": "running",
+        "enabled": true,
+        "maxInstances": 1,
+        "minInstances": 1,
+        "rules": [],
+        "scalingBehavior": "launch-terminate"
+      },
+      "networking": {
+        "networks": [
+          {
+            "id": "vpc-9483dcf1"
+          }
+        ],
+        "subnets": [
+          {
+            "id": "subnet-d7c5988e"
+          }
+        ]
+      },
+      "cloudFeatures": {
+        "type": "AwsCloudFeatures",
+        "ebsOptimized": false
+      },
+      "security": {
+        "securityGroups": [
+          {
+            "id": "sg-00bfcf79"
+          }
+        ]
+      },
+      "bootstrapping": {
+        "enabled": true,
+        "type": "ChefServerBootstrapConfiguration",
+        "server": {
+          "id": 2
+        },
+        "environment": "_default",
+        "logLevel": "auto",
+        "sslVerificationMode": "none",
+        "scope": "farmrole",
+        "daemonize": false,
+        "runList": "[\"recipe[chef-client-base::base_monitoring]\"]",
+        "attributes": "{\n\t\"sensu\": {\n\t\t\"rabbitmq\": {\n\t\t\t\"host\": \"{sensu_endpoint}\"\n\t\t}\n\t},\n\t\"chef-client-base\": {\n\t\t\"subscriptions\": [\"uchiwa-server\"]\n\t}\n}"
+      },
+      "variables": [
+        {
+          "name": "ENV",
+          "value": "test"
+        },
+        {
+          "name": "RequiredVariable",
+          "value": "ec2option"
+        }
+      ],
+      "orchestration": {
+        "rules": [
+          {
+            "trigger": {
+              "event": {
+                "id": "HostUp"
+              },
+              "triggerType": "SpecificEventTrigger"
+            },
+            "target": {
+              "targetType": "TriggeringServerTarget"
+            },
+            "action": {
+              "actionType": "ScalrScriptAction",
+              "scriptVersion": {
+                "script": {
+                  "name": "sensu-uchiwa-docker"
+                },
+                "version": -1
+              }
+            },
+            "timeout": 180,
+            "runAs": "",
+            "order": 10,
+            "blocking": true,
+            "enabled": true
+          },
+          {
+            "trigger": {
+              "event": {
+                "id": "UchiwaRestart"
+              },
+              "triggerType": "SpecificEventTrigger"
+            },
+            "target": {
+              "targetType": "TriggeringServerTarget"
+            },
+            "action": {
+              "actionType": "ScalrScriptAction",
+              "scriptVersion": {
+                "script": {
+                  "name": "docker-uchiwa-restart"
+                },
+                "version": -1
+              }
+            },
+            "timeout": 180,
+            "runAs": "",
+            "order": 10,
+            "blocking": true,
+            "enabled": true
+          }
+        ]
+      },
+      "storage": []
+    },
+    {
+      "alias": "sensu-server",
+      "role": {
+        "name": "Sensu-Chef-1604"
+      },
+      "cloudPlatform": "ec2",
+      "cloudLocation": "us-west-1",
+      "instanceType": {
+        "id": "m3.large"
+      },
+      "launchIndex": 1,
+      "advancedConfiguration": {
+        "disableAgentIptablesManagement": false,
+        "disableAgentNtpManagement": false,
+        "rebootAfterHostInit": false
+      },
+      "scaling": {
+        "considerSuspendedServers": "running",
+        "enabled": true,
+        "maxInstances": 2,
+        "minInstances": 1,
+        "rules": [],
+        "scalingBehavior": "launch-terminate"
+      },
+      "networking": {
+        "networks": [
+          {
+            "id": "vpc-9483dcf1"
+          }
+        ],
+        "subnets": [
+          {
+            "id": "subnet-d7c5988e"
+          }
+        ]
+      },
+      "cloudFeatures": {
+        "type": "AwsCloudFeatures",
+        "ebsOptimized": false
+      },
+      "security": {
+        "securityGroups": [
+          {
+            "id": "sg-00bfcf79"
+          }
+        ]
+      },
+      "bootstrapping": {
+        "enabled": true,
+        "type": "ChefServerBootstrapConfiguration",
+        "server": {
+          "id": 2
+        },
+        "environment": "_default",
+        "logLevel": "auto",
+        "sslVerificationMode": "none",
+        "scope": "farmrole",
+        "daemonize": false,
+        "runList": "[\"recipe[sensu_server_chef::default]\",\"recipe[chef-client-base::base_monitoring]\"]",
+        "attributes": "{\n\t\"sensu\": {\n\t\t\"rabbitmq\": {\n\t\t\t\"host\": \"{sensu_endpoint}\"\n\t\t}\n\t},\n\t\"chef-client-base\": {\n\t\t\"subscriptions\": [\"sensu-server\"]\n\t}\n}"
+      },
+      "variables": [
+        {
+          "name": "ENV",
+          "value": "1"
+        },
+        {
+          "name": "RequiredVariable",
+          "value": "ec2option"
+        }
+      ],
+      "orchestration": {
+        "rules": []
+      },
+      "storage": [
+        {
+          "type": "EphemeralStorageConfiguration",
+          "mounting": {
+            "enabled": true,
+            "fileSystem": "ext3",
+            "mountPoint": "/mnt"
+          },
+          "template": {
+            "size": 32,
+            "name": "ephemeral0"
+          }
+        }
+      ]
+    },
+    {
+      "alias": "client-chef",
+      "role": {
+        "name": "Sensu-Chef-1604"
+      },
+      "cloudPlatform": "ec2",
+      "cloudLocation": "us-west-1",
+      "instanceType": {
+        "id": "m3.medium"
+      },
+      "launchIndex": 2,
+      "advancedConfiguration": {
+        "disableAgentIptablesManagement": false,
+        "disableAgentNtpManagement": false,
+        "rebootAfterHostInit": false
+      },
+      "scaling": {
+        "considerSuspendedServers": "running",
+        "enabled": true,
+        "maxInstances": 2,
+        "minInstances": 1,
+        "rules": [],
+        "scalingBehavior": "launch-terminate"
+      },
+      "networking": {
+        "networks": [
+          {
+            "id": "vpc-9483dcf1"
+          }
+        ],
+        "subnets": [
+          {
+            "id": "subnet-d7c5988e"
+          }
+        ]
+      },
+      "cloudFeatures": {
+        "type": "AwsCloudFeatures",
+        "ebsOptimized": false
+      },
+      "bootstrapping": {
+        "enabled": true,
+        "type": "ChefServerBootstrapConfiguration",
+        "server": {
+          "id": 2
+        },
+        "environment": "_default",
+        "logLevel": "auto",
+        "sslVerificationMode": "none",
+        "scope": "farmrole",
+        "daemonize": false,
+        "runList": "[\"recipe[chef-client-base::base_monitoring]\"]",
+        "attributes": "{\n\t\"sensu\": {\n\t\t\"rabbitmq\": {\n\t\t\t\"host\": \"{sensu_endpoint}\"\n\t\t}\n\t},\n\t\"chef-client-base\": {\n\t\t\"subscriptions\": [\"{client_subscription}\"]\n\t}\n}"
+      },
+      "variables": [],
+      "orchestration": {
+        "rules": []
+      },
+      "storage": [
+        {
+          "type": "EphemeralStorageConfiguration",
+          "mounting": {
+            "enabled": true,
+            "fileSystem": "ext3",
+            "mountPoint": "/mnt"
+          },
+          "template": {
+            "size": 4,
+            "name": "ephemeral0"
+          }
+        }
+      ]
+    },
+    {
+      "alias": "scalr-apache",
+      "role": {
+        "name": "Sensu-Chef-1604"
+      },
+      "cloudPlatform": "ec2",
+      "cloudLocation": "us-west-1",
+      "instanceType": {
+        "id": "t2.small"
+      },
+      "launchIndex": 3,
+      "advancedConfiguration": {
+        "disableAgentIptablesManagement": false,
+        "disableAgentNtpManagement": false,
+        "rebootAfterHostInit": false
+      },
+      "scaling": {
+        "considerSuspendedServers": "running",
+        "enabled": true,
+        "maxInstances": 2,
+        "minInstances": 1,
+        "rules": [],
+        "scalingBehavior": "launch-terminate"
+      },
+      "networking": {
+        "networks": [
+          {
+            "id": "vpc-9483dcf1"
+          }
+        ],
+        "subnets": [
+          {
+            "id": "subnet-d7c5988e"
+          }
+        ]
+      },
+      "cloudFeatures": {
+        "type": "AwsCloudFeatures",
+        "ebsOptimized": false
+      },
+      "variables": [],
+      "orchestration": {
+        "rules": [
+          {
+            "trigger": {
+              "event": {
+                "id": "ApacheRestart"
+              },
+              "triggerType": "SpecificEventTrigger"
+            },
+            "target": {
+              "targetType": "TriggeringServerTarget"
+            },
+            "action": {
+              "actionType": "ScalrScriptAction",
+              "scriptVersion": {
+                "script": {
+                  "name": "docker-apache-restart"
+                },
+                "version": -1
+              }
+            },
+            "timeout": 180,
+            "runAs": "",
+            "order": 10,
+            "blocking": true,
+            "enabled": true
+          },
+          {
+            "trigger": {
+              "event": {
+                "id": "HostUp"
+              },
+              "triggerType": "SpecificEventTrigger"
+            },
+            "target": {
+              "targetType": "TriggeringServerTarget"
+            },
+            "action": {
+              "actionType": "ScalrScriptAction",
+              "scriptVersion": {
+                "script": {
+                  "name": "docker_apache_sensu_monitoring"
+                },
+                "version": -1
+              }
+            },
+            "timeout": 180,
+            "runAs": "",
+            "order": 10,
+            "blocking": true,
+            "enabled": true
+          }
+        ]
+      },
+      "storage": []
+    }
+  ]
+}

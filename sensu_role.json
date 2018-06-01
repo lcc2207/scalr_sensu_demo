@@ -1,0 +1,14 @@
+{
+   "builtinAutomation": ["base","chef"],
+   "category": {
+     "id": 1
+  },
+  "description": "Sensu-Chef-1604",
+  "name": "Sensu-Chef-1604",
+  "os": {
+   "id": "ubuntu-16-04"
+  },
+  "quickStart": false,
+  "tags": [],
+  "useScalrAgent": true
+}

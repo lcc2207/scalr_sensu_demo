@@ -1,0 +1,15 @@
+{
+   "architecture": "x86_64",
+   "cloudImageId": "ami-d1776cb1",
+   "cloudInitInstalled": true,
+   "cloudLocation": "us-west-1",
+   "cloudPlatform": "ec2",
+   "deprecated": false,
+   "name": "Scalr-Chef-Ubuntu1604-1",
+   "os": {
+     "id": "ubuntu-16-04"
+   },
+   "scalrAgentInstalled": true,
+   "size": 1,
+   "type": ""
+ }

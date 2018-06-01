@@ -1,0 +1,35 @@
+{
+	"builders": [{
+		"access_key": "{{user `aws_access_key`}}",
+		"secret_key": "{{user `aws_secret_key`}}",
+		"ami_name": "{{user `ami_name`}}",
+		"ami_virtualization_type": "HVM",
+		"instance_type": "t2.small",
+		"region": "us-west-1",
+		"security_group_ids": [
+			"sg-00bfcf79"
+		],
+		"source_ami": "{{user `base_ami`}}",
+		"ssh_username": "{{user `ami_user`}}",
+		"subnet_id": "subnet-26adbd43",
+		"type": "amazon-ebs"
+	}],
+	"post-processors": null,
+	"provisioners": [
+		{
+		"type": "chef-solo",
+		"cookbook_paths": ["./cookbooks"]
+	  },
+	  {
+	  "type": "shell",
+	  "inline": ["PLATFORM=ec2 && curl -L https://demo.scalr.com/public/linux/latest/$PLATFORM/install_scalarizr.sh | sudo bash"]
+		}
+  ],
+	"variables": {
+		"ami_name": "{{env `AMINAME`}}",
+		"ami_user": "{{env `AWS_AMI_user`}}",
+		"aws_access_key": "{{env `AWS_ACCESS_KEY`}}",
+		"aws_secret_key": "{{env `AWS_SECRET_KEY`}}",
+		"base_ami": "{{env `AWS_AMIBASE`}}"
+	}
+}

@@ -1,0 +1,87 @@
+#!/bin/bash
+
+curl -fsSL https://get.docker.com/ | sh
+service docker start || systemctl start docker
+
+sudo docker pull uchiwa/uchiwa
+mkdir ~/uchiwa-config
+cat << EOF > ~/uchiwa-config/config.json
+{
+"sensu": [
+{
+"name": "uchiwa",
+"host": "internal-sensu-elb-872514308.us-west-1.elb.amazonaws.com",
+"port": 4567
+}
+],
+"uchiwa": {
+"host": "0.0.0.0",
+"port": 3000,
+"users": [
+     {
+       "username" : "admin",
+       "password": "Pa55word",
+       "readonly": false
+     }
+   ]
+}
+}
+EOF
+
+# starting uchiwa container
+sudo docker run -d --name uchiwa -p 80:3000 -v ~/uchiwa-config:/config uchiwa/uchiwa
+
+# install plugins
+plugins=( 'sensu-plugins-docker:3.0.0' )
+
+for index in ${!plugins[*]}
+ do
+   sensu-install -p ${plugins[$index]} -v
+done
+
+
+mkdir -p /etc/sensu/conf.d/checks
+
+# setup sensu_check
+checks=('check-container.rb -H /var/run/docker.sock -N uchiwa' )
+
+for index in ${!checks[*]}
+ do
+   filename=$(echo ${checks[$index]} | awk -F".rb" '{print $1}')
+   OUT=/etc/sensu/conf.d/checks/$filename.json
+   echo $OUT
+   cat <<EOF >$OUT
+   {
+     "checks": {
+       "$filename": {
+         "command": "${checks[$index]}",
+         "standalone": true,
+         "interval": 10,
+          "hooks": {
+            "critical": {
+              "command": "sudo szradm fire-event UchiwaRestart",
+              "timeout": 10
+           }
+         }
+       }
+     }
+   }
+EOF
+done
+
+chown -R sensu:sensu /etc/sensu/conf.d/checks
+
+# check if docker group exits
+if [ $(getent group docker) ]; then
+  echo "docker group exists."
+  adduser sensu docker
+else
+  echo "dcoker group does not exist."
+fi
+
+service sensu-client restart
+
+# setup sudoers file
+cat <<EOF > /etc/sudoers.d/10-sensu
+sensu ALL=(ALL) NOPASSWD:ALL
+EOF

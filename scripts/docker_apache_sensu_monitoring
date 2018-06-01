@@ -1,0 +1,119 @@
+#!/bin/bash
+
+wget -q https://sensu.global.ssl.fastly.net/apt/pubkey.gpg -O- | sudo apt-key add -
+export CODENAME=xenial
+echo "deb     https://sensu.global.ssl.fastly.net/apt $CODENAME main" | sudo tee /etc/apt/sources.list.d/sensu.list
+
+apt-get update
+apt-get install sensu -y
+
+mkdir /etc/sensu/conf.d
+
+# /etc/sensu/conf.d/client.json
+cat <<EOF > /etc/sensu/conf.d/client.json
+{
+  "client": {
+    "address": "$SCALR_INTERNAL_IP",
+    "subscriptions": [
+      "client-test"
+    ],
+    "name": "$SCALR_SERVER_HOSTNAME",
+    "contacts": "support"
+  }
+}
+EOF
+
+# /etc/sensu/config.json
+cat <<EOF > /etc/sensu/config.json
+{
+  "transport": {
+    "reconnect_on_error": true,
+    "name": "rabbitmq"
+  },
+  "rabbitmq": [
+    {
+      "host": "internal-sensu-elb-872514308.us-west-1.elb.amazonaws.com",
+      "port": 5672,
+      "vhost": "/sensu",
+      "user": "sensu",
+      "password": "password"
+    }
+  ],
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "reconnect_on_error": true
+  },
+  "api": {
+    "host": "localhost",
+    "bind": "0.0.0.0",
+    "port": 4567
+  }
+}
+EOF
+
+# install docker
+curl -fsSL https://get.docker.com/ | sh
+service docker start || systemctl start docker
+
+# git pull the latest index.html
+cd /opt
+git clone https://github.com/lcc2207/test1.git ./htdocs
+
+# starting the jenkins container
+docker run -d --name apache -p 80:80 -v /opt/htdocs/:/usr/local/apache2/htdocs/ httpd:2.4
+
+# install plugins
+plugins=( 'sensu-plugins-docker:3.0.0' )
+
+for index in ${!plugins[*]}
+ do
+   sensu-install -p ${plugins[$index]} -v
+done
+
+
+mkdir -p /etc/sensu/conf.d/checks
+
+# setup sensu_check
+checks=('check-container.rb -H /var/run/docker.sock -N apache' )
+
+for index in ${!checks[*]}
+ do
+   filename=$(echo ${checks[$index]} | awk -F".rb" '{print $1}')
+   OUT=/etc/sensu/conf.d/checks/$filename.json
+   echo $OUT
+   cat <<EOF >$OUT
+   {
+     "checks": {
+       "$filename": {
+         "command": "${checks[$index]}",
+         "standalone": true,
+         "interval": 10,
+          "hooks": {
+            "critical": {
+              "command": "sudo szradm fire-event ApacheRestart",
+              "timeout": 10
+           }
+         }
+       }
+     }
+   }
+EOF
+done
+
+chown -R sensu:sensu /etc/sensu/conf.d/checks
+
+# check if docker group exits
+if [ $(getent group docker) ]; then
+  echo "docker group exists."
+  adduser sensu docker
+else
+  echo "docker group does not exist."
+fi
+
+service sensu-client restart
+
+# setup sudoers file
+cat <<EOF > /etc/sudoers.d/10-sensu
+sensu ALL=(ALL) NOPASSWD:ALL
+EOF
