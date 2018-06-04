@@ -82,7 +82,7 @@
         "sslVerificationMode": "none",
         "scope": "farmrole",
         "daemonize": false,
-        "runList": "[\"recipe[chef-client-base::base_monitoring]\"]",
+        "runList": "[\"recipe[sensu_server_chef::client]\"]",
         "attributes": "{\n\t\"sensu\": {\n\t\t\"rabbitmq\": {\n\t\t\t\"host\": \"{sensu_endpoint}\"\n\t\t}\n\t},\n\t\"chef-client-base\": {\n\t\t\"subscriptions\": [\"uchiwa-server\"]\n\t}\n}"
       },
       "variables": [
@@ -209,7 +209,7 @@
         "sslVerificationMode": "none",
         "scope": "farmrole",
         "daemonize": false,
-        "runList": "[\"recipe[sensu_server_chef::default]\",\"recipe[chef-client-base::base_monitoring]\"]",
+        "runList": "[\"recipe[sensu_server_chef::default]\",\"recipe[sensu_server_chef::client]\"]",
         "attributes": "{\n\t\"sensu\": {\n\t\t\"rabbitmq\": {\n\t\t\t\"host\": \"{sensu_endpoint}\"\n\t\t}\n\t},\n\t\"chef-client-base\": {\n\t\t\"subscriptions\": [\"sensu-server\"]\n\t}\n}"
       },
       "variables": [
