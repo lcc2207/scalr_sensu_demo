@@ -88,6 +88,9 @@ export farm_template=$FName.json
 # done
 # cd ..
 
+# create custom events used
+# scalr-ctl --config $config events create --stdin < events/UchiwaRestart
+
 # build farm
 
 # Create farm and get ID
